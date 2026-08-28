@@ -113,6 +113,8 @@
   <span><kbd>&minus;</kbd><kbd>+</kbd> text <b id="sz">44</b>px</span>
   <span><kbd>R</kbd> restart</span>
   <span class="spacer"></span>
+  <span id="status"></span>
+  <button id="sync">Sync</button>
   <button id="theme">Invert</button>
 </div>
 
@@ -121,6 +123,9 @@ const scroller = document.getElementById('scroller');
 const script   = document.getElementById('script');
 const spdEl    = document.getElementById('spd');
 const szEl     = document.getElementById('sz');
+const statusEl = document.getElementById('status');
+
+const RAW = 'https://gist.githubusercontent.com/Har150n/bbbff0b5695f1b5b27cecbf57e47466d/raw/script.txt';
 
 let speed   = +(localStorage.tp_speed || 4);
 let size    = +(localStorage.tp_size  || 44);
@@ -130,6 +135,24 @@ let last    = 0;
 
 script.innerText = localStorage.tp_text || '';
 apply();
+pull();
+
+function setStatus(t) { statusEl.textContent = t; }
+
+async function pull() {
+  setStatus('syncing\u2026');
+  try {
+    const r = await fetch(RAW + '?t=' + Date.now(), { cache: 'no-store' });
+    if (!r.ok) throw new Error(r.status);
+    const text = (await r.text()).replace(/\s+$/, '');
+    script.innerText = text;
+    localStorage.tp_text = text;
+    restart();
+    setStatus('synced ' + new Date().toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}));
+  } catch (e) {
+    setStatus(localStorage.tp_text ? 'offline, using saved' : 'no script');
+  }
+}
 
 function apply() {
   document.documentElement.style.setProperty('--size', size + 'px');
@@ -190,7 +213,12 @@ document.addEventListener('keydown', e => {
   if (e.key.toLowerCase() === 'r')    { restart(); }
 });
 
-script.addEventListener('input', () => { localStorage.tp_text = script.innerText; });
+script.addEventListener('input', () => {
+  localStorage.tp_text = script.innerText;
+  setStatus('local edits');
+});
+
+document.getElementById('sync').addEventListener('click', pull);
 
 document.getElementById('theme').addEventListener('click', () => {
   document.documentElement.classList.toggle('dark');
