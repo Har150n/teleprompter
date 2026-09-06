@@ -114,7 +114,7 @@
   <span><kbd>R</kbd> restart</span>
   <span class="spacer"></span>
   <span id="status"></span>
-  <button id="sync">Sync</button>
+  <button id="sync" title="Load the latest gist script, replacing saved text">Sync</button>
   <button id="theme">Invert</button>
 </div>
 
@@ -124,6 +124,7 @@ const script   = document.getElementById('script');
 const spdEl    = document.getElementById('spd');
 const szEl     = document.getElementById('sz');
 const statusEl = document.getElementById('status');
+const syncBtn  = document.getElementById('sync');
 
 const RAW = 'https://gist.githubusercontent.com/Har150n/bbbff0b5695f1b5b27cecbf57e47466d/raw/script.txt';
 
@@ -132,25 +133,37 @@ let size    = +(localStorage.tp_size  || 44);
 let running = false;
 let offset  = 0;
 let last    = 0;
+let edits   = 0;
 
-script.innerText = localStorage.tp_text || '';
+const savedText = localStorage.getItem('tp_text');
+script.innerText = savedText ?? '';
 apply();
-pull();
+if (savedText === null) pull();
+else setStatus('saved locally');
 
 function setStatus(t) { statusEl.textContent = t; }
 
 async function pull() {
+  const editsAtStart = edits;
+  syncBtn.disabled = true;
   setStatus('syncing\u2026');
   try {
     const r = await fetch(RAW + '?t=' + Date.now(), { cache: 'no-store' });
     if (!r.ok) throw new Error(r.status);
     const text = (await r.text()).replace(/\s+$/, '');
+    if (edits !== editsAtStart) {
+      setStatus('local edits kept');
+      return;
+    }
     script.innerText = text;
     localStorage.tp_text = text;
     restart();
     setStatus('synced ' + new Date().toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}));
   } catch (e) {
-    setStatus(localStorage.tp_text ? 'offline, using saved' : 'no script');
+    setStatus(localStorage.getItem('tp_text') !== null
+      ? 'sync failed, saved text kept' : 'sync failed, paste your script');
+  } finally {
+    syncBtn.disabled = false;
   }
 }
 
@@ -214,11 +227,16 @@ document.addEventListener('keydown', e => {
 });
 
 script.addEventListener('input', () => {
+  edits++;
   localStorage.tp_text = script.innerText;
-  setStatus('local edits');
+  setStatus('saved locally');
 });
 
-document.getElementById('sync').addEventListener('click', pull);
+syncBtn.addEventListener('click', () => {
+  if (localStorage.getItem('tp_text') !== null
+      && !confirm('Replace your saved text with the latest script from the gist?')) return;
+  pull();
+});
 
 document.getElementById('theme').addEventListener('click', () => {
   document.documentElement.classList.toggle('dark');
