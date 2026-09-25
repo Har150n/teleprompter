@@ -72,10 +72,10 @@
     display: flex;
     gap: 18px;
     align-items: center;
-    padding: 10px 16px;
+    padding: 16px 24px;
     background: var(--bg);
     border-top: 1px solid var(--line);
-    font-size: 13px;
+    font-size: 20px;
     color: var(--dim);
     z-index: 4;
     transition: opacity .25s;
@@ -95,8 +95,8 @@
     color: var(--dim);
     background: none;
     border: 1px solid var(--line);
-    border-radius: 6px;
-    padding: 4px 10px;
+    border-radius: 8px;
+    padding: 10px 22px;
     cursor: pointer;
   }
   button:hover { color: var(--fg); }
@@ -225,6 +225,13 @@ document.addEventListener('keydown', e => {
   if (e.key === '-' || e.key === '_') { size = Math.max(20,  size - 4); apply(); }
   if (e.key.toLowerCase() === 'r')    { restart(); }
 });
+
+scroller.addEventListener('wheel', e => {
+  e.preventDefault();
+  const max = Math.max(0, script.scrollHeight - scroller.clientHeight);
+  offset = Math.min(max, Math.max(0, offset + e.deltaY));
+  script.style.transform = 'translateY(' + -offset + 'px)';
+}, { passive: false });
 
 script.addEventListener('input', () => {
   edits++;
